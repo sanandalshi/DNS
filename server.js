@@ -910,9 +910,9 @@ socket.on('error', (err) => {
   console.error('DNS server error:', err);
 });
 
-// Start DNS server on port 53
-socket.bind(1024, () => {
-  console.log('DNS server listening on port 53');
+const DNS_PORT = process.env.DNS_PORT || 1024; // Use 1024 to avoid root privileges
+socket.bind(DNS_PORT, () => {
+  console.log(`DNS server listening on port ${DNS_PORT}`);
 });
 
 module.exports = socket;
