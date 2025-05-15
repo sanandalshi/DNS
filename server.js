@@ -911,7 +911,7 @@ socket.on('error', (err) => {
 });
 
 // Start DNS server on port 53
-socket.bind(53, () => {
+socket.bind(5353, () => {
   console.log('DNS server listening on port 53');
 });
 
