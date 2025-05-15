@@ -457,6 +457,255 @@
 // });
 
 // module.exports = app;
+//ye naya hai
+// const express = require('express');
+// const app = express();
+// const dgram = require('dgram');
+// const ejs = require('ejs');
+// const dnsPacket = require('dns-packet');
+// const bp = require('body-parser');
+// const { ObjectId } = require('mongodb');
+// const { getDb, connectDB } = require('./util/database');
+
+// app.set('view engine', 'ejs');
+// app.use(bp.urlencoded({ extended: false }));
+
+// // Initialize database connection
+// connectDB().catch(console.error);
+
+// // Home page - DNS management
+// app.get('/', async (req, res) => {
+//   try {
+//     const db = getDb();
+//     if (!db) {
+//       throw new Error('Database connection not available');
+//     }
+    
+//     const records = await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray();
+//     res.render('index', { records, result: null, error: null });
+//   } catch (error) {
+//     console.error('Error fetching DNS records:', error);
+//     res.render('index', { records: [], result: null, error: 'Failed to fetch DNS records' });
+//   }
+// });
+
+// // DNS lookup with redirection support
+// app.post('/lookup', async (req, res) => {
+//   const domain = req.body.url;
+//   const type = req.body.recordType;
+//   const socket = dgram.createSocket('udp4');
+//   const redirectRequested = req.body.redirect === 'on';
+  
+//   // Create DNS query packet
+//   const message = dnsPacket.encode({
+//     type: 'query',
+//     id: Math.floor(Math.random() * 65535),
+//     flags: dnsPacket.RECURSION_DESIRED,
+//     questions: [{
+//       name: domain,
+//       type: type,
+//       class: 'IN'
+//     }]
+//   });
+  
+//   // Set timeout to avoid hanging
+//   const timeout = setTimeout(() => {
+//     socket.close();
+//     res.render('index', { 
+//       records: [], 
+//       result: { domain, type, message: 'DNS lookup timed out' }, 
+//       error: null 
+//     });
+//   }, 5000);
+  
+//   // Send DNS query
+//   socket.send(message, 53, 'localhost', (err) => {
+//     if (err) {
+//       clearTimeout(timeout);
+//       console.error('Error sending DNS query:', err);
+//       res.render('index', { 
+//         records: [], 
+//         result: { domain, type, message: 'Failed to send DNS query' }, 
+//         error: 'Error occurred while sending DNS query' 
+//       });
+//       socket.close();
+//       return;
+//     }
+//   });
+  
+//   // Handle response
+//   socket.on('message', async (msg) => {
+//     clearTimeout(timeout);
+//     try {
+//       const response = dnsPacket.decode(msg);
+//       console.log('DNS Response:', response);
+      
+//       // Get all DNS records to display in the management panel
+//       let records = [];
+//       try {
+//         const db = getDb();
+//         if (!db) {
+//           throw new Error('Database connection not available');
+//         }
+//         records = await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray();
+//       } catch (dbError) {
+//         console.error('Error fetching DNS records:', dbError);
+//       }
+      
+//       // Handle redirection for A records if redirect checkbox is checked
+//       if (redirectRequested && 
+//           type === 'A' && 
+//           response.answers && 
+//           response.answers.length > 0 && 
+//           response.answers[0].type === 'A') {
+        
+//         const ipAddress = response.answers[0].data;
+//         socket.close();
+        
+//         // Redirect to the IP address with HTTP protocol
+//         return res.redirect(`http://${ipAddress}`);
+//       }
+      
+//       // Otherwise, just display the results
+//       res.render('index', { 
+//         records, 
+//         result: { 
+//           domain, 
+//           type, 
+//           answers: response.answers || [],
+//           message: response.answers && response.answers.length > 0 ? null : 'No records found'
+//         }, 
+//         error: null 
+//       });
+      
+//     } catch (error) {
+//       console.error('Error processing DNS response:', error);
+//       res.render('index', { 
+//         records: [], 
+//         result: { domain, type, message: 'Error processing DNS response' },
+//         error: 'Failed to process DNS lookup result' 
+//       });
+//     } finally {
+//       socket.close();
+//     }
+//   });
+  
+//   // Handle errors
+//   socket.on('error', (err) => {
+//     clearTimeout(timeout);
+//     console.error('Socket error:', err);
+//     res.render('index', { 
+//       records: [], 
+//       result: { domain, type, message: 'DNS lookup failed' }, 
+//       error: 'DNS server error: ' + err.message 
+//     });
+//     socket.close();
+//   });
+// });
+
+// // Add a new DNS record
+// app.post('/record/add', async (req, res) => {
+//   const { url, record, data } = req.body;
+  
+//   try {
+//     const db = getDb();
+//     if (!db) {
+//       throw new Error('Database connection not available');
+//     }
+    
+//     await db.collection('dns').insertOne({
+//       url,
+//       record,
+//       data,
+//       created_at: new Date(),
+//       updated_at: new Date()
+//     });
+    
+//     res.redirect('/');
+//   } catch (error) {
+//     console.error('Error adding DNS record:', error);
+    
+//     const db = getDb();
+//     const records = db ? await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray() : [];
+    
+//     res.render('index', { 
+//       records, 
+//       result: null, 
+//       error: 'Failed to add DNS record: ' + error.message 
+//     });
+//   }
+// });
+
+// // Update an existing DNS record
+// app.post('/record/update', async (req, res) => {
+//   const { id, url, record, data } = req.body;
+  
+//   try {
+//     const db = getDb();
+//     if (!db) {
+//       throw new Error('Database connection not available');
+//     }
+    
+//     await db.collection('dns').updateOne(
+//       { _id: new ObjectId(id) },
+//       { 
+//         $set: {
+//           url,
+//           record,
+//           data,
+//           updated_at: new Date()
+//         }
+//       }
+//     );
+    
+//     res.redirect('/');
+//   } catch (error) {
+//     console.error('Error updating DNS record:', error);
+    
+//     const db = getDb();
+//     const records = db ? await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray() : [];
+    
+//     res.render('index', { 
+//       records, 
+//       result: null, 
+//       error: 'Failed to update DNS record: ' + error.message 
+//     });
+//   }
+// });
+
+// // Delete a DNS record
+// app.post('/record/delete', async (req, res) => {
+//   const { id } = req.body;
+  
+//   try {
+//     const db = getDb();
+//     if (!db) {
+//       throw new Error('Database connection not available');
+//     }
+    
+//     await db.collection('dns').deleteOne({ _id: new ObjectId(id) });
+//     res.redirect('/');
+//   } catch (error) {
+//     console.error('Error deleting DNS record:', error);
+    
+//     const db = getDb();
+//     const records = db ? await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray() : [];
+    
+//     res.render('index', { 
+//       records, 
+//       result: null, 
+//       error: 'Failed to delete DNS record: ' + error.message 
+//     });
+//   }
+// });
+
+// // Start the server
+// const PORT = process.env.PORT || 8080;
+// app.listen(PORT, () => {
+//   console.log(`Web interface running on http://localhost:${PORT}`);
+// });
+
+// module.exports = app;
 const express = require('express');
 const app = express();
 const dgram = require('dgram');
@@ -469,21 +718,32 @@ const { getDb, connectDB } = require('./util/database');
 app.set('view engine', 'ejs');
 app.use(bp.urlencoded({ extended: false }));
 
-// Initialize database connection
-connectDB().catch(console.error);
+// Initialize database connection (non-blocking)
+let dbPromise = connectDB().catch((err) => {
+  console.error('Initial database connection failed:', err.message);
+  return null; // Allow server to start even if DB fails
+});
+
+// Start the server immediately
+const PORT = process.env.PORT || 8080;
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Web interface running on http://0.0.0.0:${PORT}`);
+}).on('error', (err) => {
+  console.error(`Failed to bind to port ${PORT}:`, err.message);
+  process.exit(1);
+});
 
 // Home page - DNS management
 app.get('/', async (req, res) => {
   try {
-    const db = getDb();
+    const db = getDb() || (await dbPromise);
     if (!db) {
       throw new Error('Database connection not available');
     }
-    
     const records = await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray();
     res.render('index', { records, result: null, error: null });
   } catch (error) {
-    console.error('Error fetching DNS records:', error);
+    console.error('Error fetching DNS records:', error.message);
     res.render('index', { records: [], result: null, error: 'Failed to fetch DNS records' });
   }
 });
@@ -492,9 +752,13 @@ app.get('/', async (req, res) => {
 app.post('/lookup', async (req, res) => {
   const domain = req.body.url;
   const type = req.body.recordType;
-  const socket = dgram.createSocket('udp4');
   const redirectRequested = req.body.redirect === 'on';
-  
+  const socket = dgram.createSocket('udp4');
+
+  // Use environment variable for DNS server address and port
+  const dnsHost = process.env.DNS_HOST || 'localhost';
+  const dnsPort = process.env.DNS_PORT || 1024; // Match server.js port
+
   // Create DNS query packet
   const message = dnsPacket.encode({
     type: 'query',
@@ -506,97 +770,93 @@ app.post('/lookup', async (req, res) => {
       class: 'IN'
     }]
   });
-  
+
   // Set timeout to avoid hanging
   const timeout = setTimeout(() => {
     socket.close();
-    res.render('index', { 
-      records: [], 
-      result: { domain, type, message: 'DNS lookup timed out' }, 
-      error: null 
+    res.render('index', {
+      records: [],
+      result: { domain, type, message: 'DNS lookup timed out' },
+      error: null
     });
   }, 5000);
-  
+
   // Send DNS query
-  socket.send(message, 53, 'localhost', (err) => {
+  socket.send(message, dnsPort, dnsHost, (err) => {
     if (err) {
       clearTimeout(timeout);
-      console.error('Error sending DNS query:', err);
-      res.render('index', { 
-        records: [], 
-        result: { domain, type, message: 'Failed to send DNS query' }, 
-        error: 'Error occurred while sending DNS query' 
+      console.error(`Error sending DNS query to ${dnsHost}:${dnsPort}:`, err.message);
+      res.render('index', {
+        records: [],
+        result: { domain, type, message: 'Failed to send DNS query' },
+        error: 'Error occurred while sending DNS query'
       });
       socket.close();
       return;
     }
   });
-  
+
   // Handle response
   socket.on('message', async (msg) => {
     clearTimeout(timeout);
     try {
       const response = dnsPacket.decode(msg);
       console.log('DNS Response:', response);
-      
+
       // Get all DNS records to display in the management panel
       let records = [];
       try {
-        const db = getDb();
+        const db = getDb() || (await dbPromise);
         if (!db) {
           throw new Error('Database connection not available');
         }
         records = await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray();
       } catch (dbError) {
-        console.error('Error fetching DNS records:', dbError);
+        console.error('Error fetching DNS records:', dbError.message);
       }
-      
+
       // Handle redirection for A records if redirect checkbox is checked
-      if (redirectRequested && 
-          type === 'A' && 
-          response.answers && 
-          response.answers.length > 0 && 
+      if (redirectRequested &&
+          type === 'A' &&
+          response.answers &&
+          response.answers.length > 0 &&
           response.answers[0].type === 'A') {
-        
         const ipAddress = response.answers[0].data;
         socket.close();
-        
-        // Redirect to the IP address with HTTP protocol
         return res.redirect(`http://${ipAddress}`);
       }
-      
+
       // Otherwise, just display the results
-      res.render('index', { 
-        records, 
-        result: { 
-          domain, 
-          type, 
+      res.render('index', {
+        records,
+        result: {
+          domain,
+          type,
           answers: response.answers || [],
           message: response.answers && response.answers.length > 0 ? null : 'No records found'
-        }, 
-        error: null 
+        },
+        error: null
       });
-      
     } catch (error) {
-      console.error('Error processing DNS response:', error);
-      res.render('index', { 
-        records: [], 
+      console.error('Error processing DNS response:', error.message);
+      res.render('index', {
+        records: [],
         result: { domain, type, message: 'Error processing DNS response' },
-        error: 'Failed to process DNS lookup result' 
+        error: 'Failed to process DNS lookup result'
       });
     } finally {
       socket.close();
     }
   });
-  
+
   // Handle errors
   socket.on('error', (err) => {
     clearTimeout(timeout);
-    console.error('Socket error:', err);
-    res.render('index', { 
-      records: [], 
-      result: { domain, type, message: 'DNS lookup failed' }, 
-      error: 'DNS server error: ' + err.message 
+    console.error('Socket error:', err.message);
+    res.render('index', {
+      records: [],
+      result: { domain, type, message: 'DNS lookup failed' },
+      error: 'DNS server error: ' + err.message
     });
     socket.close();
   });
@@ -605,13 +865,11 @@ app.post('/lookup', async (req, res) => {
 // Add a new DNS record
 app.post('/record/add', async (req, res) => {
   const { url, record, data } = req.body;
-  
   try {
-    const db = getDb();
+    const db = getDb() || (await dbPromise);
     if (!db) {
       throw new Error('Database connection not available');
     }
-    
     await db.collection('dns').insertOne({
       url,
       record,
@@ -619,18 +877,15 @@ app.post('/record/add', async (req, res) => {
       created_at: new Date(),
       updated_at: new Date()
     });
-    
     res.redirect('/');
   } catch (error) {
-    console.error('Error adding DNS record:', error);
-    
-    const db = getDb();
+    console.error('Error adding DNS record:', error.message);
+    const db = getDb() || (await dbPromise);
     const records = db ? await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray() : [];
-    
-    res.render('index', { 
-      records, 
-      result: null, 
-      error: 'Failed to add DNS record: ' + error.message 
+    res.render('index', {
+      records,
+      result: null,
+      error: 'Failed to add DNS record: ' + error.message
     });
   }
 });
@@ -638,16 +893,14 @@ app.post('/record/add', async (req, res) => {
 // Update an existing DNS record
 app.post('/record/update', async (req, res) => {
   const { id, url, record, data } = req.body;
-  
   try {
-    const db = getDb();
+    const db = getDb() || (await dbPromise);
     if (!db) {
       throw new Error('Database connection not available');
     }
-    
     await db.collection('dns').updateOne(
       { _id: new ObjectId(id) },
-      { 
+      {
         $set: {
           url,
           record,
@@ -656,18 +909,15 @@ app.post('/record/update', async (req, res) => {
         }
       }
     );
-    
     res.redirect('/');
   } catch (error) {
-    console.error('Error updating DNS record:', error);
-    
-    const db = getDb();
+    console.error('Error updating DNS record:', error.message);
+    const db = getDb() || (await dbPromise);
     const records = db ? await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray() : [];
-    
-    res.render('index', { 
-      records, 
-      result: null, 
-      error: 'Failed to update DNS record: ' + error.message 
+    res.render('index', {
+      records,
+      result: null,
+      error: 'Failed to update DNS record: ' + error.message
     });
   }
 });
@@ -675,33 +925,23 @@ app.post('/record/update', async (req, res) => {
 // Delete a DNS record
 app.post('/record/delete', async (req, res) => {
   const { id } = req.body;
-  
   try {
-    const db = getDb();
+    const db = getDb() || (await dbPromise);
     if (!db) {
       throw new Error('Database connection not available');
     }
-    
     await db.collection('dns').deleteOne({ _id: new ObjectId(id) });
     res.redirect('/');
   } catch (error) {
-    console.error('Error deleting DNS record:', error);
-    
-    const db = getDb();
+    console.error('Error deleting DNS record:', error.message);
+    const db = getDb() || (await dbPromise);
     const records = db ? await db.collection('dns').find().sort({ url: 1, record: 1 }).toArray() : [];
-    
-    res.render('index', { 
-      records, 
-      result: null, 
-      error: 'Failed to delete DNS record: ' + error.message 
+    res.render('index', {
+      records,
+      result: null,
+      error: 'Failed to delete DNS record: ' + error.message
     });
   }
-});
-
-// Start the server
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Web interface running on http://localhost:${PORT}`);
 });
 
 module.exports = app;
