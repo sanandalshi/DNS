@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Server Manager</title>
+   <style>
+    :root {
+      --red: #e63946;
+      --white: #f1faee;
+      --mint: #a8dadc;
+      --blue: #457b9d;
+      --dark-blue: #1d3557;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--white);
+      color: var(--dark-blue);
+      margin: 0;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--dark-blue);
+      margin-bottom: 30px;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .panel {
+      flex: 1;
+      background-color: var(--mint);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h2, h3 {
+      color: var(--blue);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--blue);
+      border-radius: 6px;
+      background-color: #fff;
+      box-sizing: border-box;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .checkbox-group input {
+      width: auto;
+      margin-right: 10px;
+    }
+
+    button {
+      background-color: var(--blue);
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: var(--dark-blue);
+    }
+
+    .edit-btn {
+      background-color: var(--blue);
+    }
+
+    .edit-btn:hover {
+      background-color: var(--dark-blue);
+    }
+
+    .delete-btn {
+      background-color: var(--red);
+    }
+
+    .delete-btn:hover {
+      background-color: #c5303c;
+    }
+
+    .record-form {
+      display: none;
+      margin-top: 20px;
+      background-color: var(--white);
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    .info-box {
+      background-color: var(--white);
+      border-left: 4px solid var(--blue);
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .error {
+      background-color: #ffebee;
+      color: var(--red);
+      border-left: 4px solid var(--red);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .result {
+      background-color: #e8f5e9;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #fff;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--blue);
+      color: #fff;
+    }
+
+    tr:nth-child(even) {
+      background-color: var(--white);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-buttons form {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+    <h1>DNS Server Manager</h1>
+    
+    <% if (typeof error !== 'undefined' && error) { %>
+        <div class="error"><%= error %></div>
+    <% } %>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>DNS Lookup</h2>
+            <div class="info-box">
+                <p><strong>Redirection Feature:</strong> When searching for A records, you can check the "Redirect" option to automatically navigate to the IP address if a record is found.</p>
+            </div>
+            <form action="/lookup" method="POST">
+                <div class="form-group">
+                    <label for="url">Domain Name:</label>
+                    <input type="text" id="url" name="url" placeholder="example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="recordType">Record Type:</label>
+                    <select id="recordType" name="recordType">
+                        <option value="A">A</option>
+                        <option value="CNAME">CNAME</option>
+                        <option value="MX">MX</option>
+                        <option value="TXT">TXT</option>
+                    </select>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="redirect" name="redirect">
+                    <label for="redirect">Redirect to address (for A records)</label>
+                </div>
+                <button type="submit">Lookup</button>
+            </form>
+            
+            <% if (result) { %>
+                <div class="result">
+                    <h3>Lookup Results for <%= result.domain %> (<%= result.type %>)</h3>
+                    
+                    <% if (result.answers && result.answers.length > 0) { %>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>TTL</th>
+                                    <th>Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% result.answers.forEach(answer => { %>
+                                    <tr>
+                                        <td><%= answer.name %></td>
+                                        <td><%= answer.type %></td>
+                                        <td><%= answer.ttl %></td>
+                                        <td>
+                                            <% if (answer.type === 'MX') { %>
+                                                <%= answer.data.preference %> <%= answer.data.exchange %>
+                                            <% } else if (answer.type === 'TXT') { %>
+                                                <%= answer.data.join(', ') %>
+                                            <% } else { %>
+                                                <%= answer.data %>
+                                                <% if (answer.type === 'A') { %>
+                                                    <a href="http://<%= answer.data %>" target="_blank">(Visit)</a>
+                                                <% } %>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p><%= result.message || 'No records found' %></p>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+        
+        <div class="panel">
+            <h2>DNS Records Management</h2>
+            
+            <button id="showAddForm" type="button">Add New Record</button>
+            
+            <form id="addForm" class="record-form" action="/record/add" method="POST">
+                <h3>Add New DNS Record</h3>
+                <div class="form-group">
+                    <label for="add-url">Domain:</label>
+                    <input type="text" id="add-url" name="url" placeholder="example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-record">Record Type:</label>
+                    <select id="add-record" name="record" required>
+                        <option value="A">A</option>
+                        <option value="CNAME">CNAME</option>
+                        <option value="MX">MX</option>
+                        <option value="TXT">TXT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="add-data">Data:</label>
+                    <input type="text" id="add-data" name="data" placeholder="192.168.1.1" required>
+                </div>
+                <button type="submit">Add Record</button>
+                <button type="button" onclick="document.getElementById('addForm').style.display='none'">Cancel</button>
+            </form>
+            
+            <form id="editForm" class="record-form" action="/record/update" method="POST">
+                <h3>Edit DNS Record</h3>
+                <input type="hidden" id="edit-id" name="id">
+                <div class="form-group">
+                    <label for="edit-url">Domain:</label>
+                    <input type="text" id="edit-url" name="url" placeholder="example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-record">Record Type:</label>
+                    <select id="edit-record" name="record" required>
+                        <option value="A">A</option>
+                        <option value="CNAME">CNAME</option>
+                        <option value="MX">MX</option>
+                        <option value="TXT">TXT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-data">Data:</label>
+                    <input type="text" id="edit-data" name="data" placeholder="192.168.1.1" required>
+                </div>
+                <button type="submit">Update Record</button>
+                <button type="button" onclick="document.getElementById('editForm').style.display='none'">Cancel</button>
+            </form>
+            
+            <% if (records && records.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Type</th>
+                            <th>Data</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% records.forEach(record => { %>
+                            <tr>
+                                <td><%= record.url %></td>
+                                <td><%= record.record %></td>
+                                <td>
+                                    <%= record.data %>
+                                    <% if (record.record === 'A') { %>
+                                        <a href="http://<%= record.data %>" target="_blank">(Visit)</a>
+                                    <% } %>
+                                </td>
+                                <td class="action-buttons">
+                                    <button class="edit-btn" onclick="editRecord('<%= record.id %>', '<%= record.url %>', '<%= record.record %>', '<%= record.data %>')">Edit</button>
+                                    <form action="/record/delete" method="POST">
+                                        <input type="hidden" name="id" value="<%= record.id %>">
+                                        <button class="delete-btn" type="submit" onclick="return confirm('Are you sure you want to delete this record?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p>No DNS records found.</p>
+            <% } %>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('showAddForm').addEventListener('click', function() {
+            document.getElementById('addForm').style.display = 'block';
+            document.getElementById('editForm').style.display = 'none';
+        });
+        
+        function editRecord(id, url, recordType, data) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-url').value = url;
+            document.getElementById('edit-record').value = recordType;
+            document.getElementById('edit-data').value = data;
+            document.getElementById('editForm').style.display = 'block';
+            document.getElementById('addForm').style.display = 'none';
+        }
+        
+        // Check if redirect checkbox should be enabled based on record type
+        document.getElementById('recordType').addEventListener('change', function() {
+            const redirectCheckbox = document.getElementById('redirect');
+            if (this.value === 'A') {
+                redirectCheckbox.disabled = false;
+            } else {
+                redirectCheckbox.checked = false;
+                redirectCheckbox.disabled = true;
+            }
+        });
+        
+        // Initial check on page load
+        window.onload = function() {
+            const recordTypeSelect = document.getElementById('recordType');
+            const redirectCheckbox = document.getElementById('redirect');
+            
+            if (recordTypeSelect.value !== 'A') {
+                redirectCheckbox.checked = false;
+                redirectCheckbox.disabled = true;
+            }
+        };
+    </script>
+</body>
+</html>

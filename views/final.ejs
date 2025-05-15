@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DNS Result</title>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ipAddress = '<%= data %>';
+      if (ipAddress) {
+        window.location.href = `http://${ipAddress}`;
+      }
+    });
+  </script>
+</body>
+</html>
