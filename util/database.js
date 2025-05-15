@@ -48,15 +48,11 @@
 // module.exports = pool;
 const { MongoClient } = require('mongodb');
 
-// // MongoDB connection URL with credentials
-// const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-// const dbName = process.env.DB_NAME || 'dns server';
-// const username = process.env.DB_USER || 'KRwm7Is3Fh01PqJu';
-// const password = process.env.DB_PASSWORD || 'KRwm7Is3Fh01PqJu';
+
 const dbName = process.env.DB_NAME || 'sanandalshi';
 const username = process.env.DB_USER || 'sanandalshi';
 const password = process.env.DB_PASSWORD || 'QOVH95S4KQ0ESu89';
-const uri = process.env.MONGODB_URI || `mongodb+srv://sanandalshi:${password}@cluster0.znvpuws.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+const uri = process.env.MONGODB_URI || `mongodb+srv://sanandalshi:QOVH95S4KQ0ESu89@cluster0.znvpuws.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
 
 // Create a MongoDB client
 const client = new MongoClient(uri, {
